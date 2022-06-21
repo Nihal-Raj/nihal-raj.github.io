@@ -1,0 +1,84 @@
+body {
+  background-color: #FBE8A6;
+  max-width: 650px;
+  font-size: 18px;
+  font-family: 'Gadugi';
+  margin: 50px;
+}
+
+h1 {
+  font-size: 3em;
+  font-family: 'Gadugi';
+  }
+
+
+h2, h4, h5, h6 {
+  font-family: 'Gadugi';
+  font-size: 1.7em;
+}
+
+h3 {
+  font-family: 'Gadugi';
+  font-size: 1.3em;
+}
+
+p {
+  font-family: 'Nobile', Helvetica, Arial;
+  font-size: 18px;
+}
+
+a {
+  color: purple;
+  font-family: 'Nobile', Helvetica, Arial;
+  } 
+  
+em {
+  font-family: 'Arial Narrow';
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+      background-color: #252627;
+      max-width: 650px;
+      font-size: 18px;
+      font-family: 'Nobile', Helvetica, Arial;
+      margin: 50px;
+    }
+    
+    h1 {
+      color: rgb(47, 255, 161);
+      font-size: 3em;
+      font-family: 'Gadugi';
+      }  
+    
+    h2, h4, h5, h6 {
+      color: rgb(47, 255, 161);
+      font-family: 'Gadugi';
+      font-size: 1.7em;
+    }
+    
+    h3 {
+      color: white;
+      font-family: 'Gadugi';
+      font-size: 1.3em;
+    }
+
+    p {
+      color: #eeeeee;
+      font-family: 'Nobile', Helvetica, Arial;
+      font-size: 18px;
+    }
+
+    a {
+      color: pink;
+      font-family: 'Nobile', Helvetica, Arial;
+      }
+
+    li{
+      color: #eeeeee;
+    }
+
+    em {
+      font-family: 'Arial Narrow';
+    }    
+}

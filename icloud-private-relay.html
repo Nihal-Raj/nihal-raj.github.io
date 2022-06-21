@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>iCloud Private Relay | Nihal Raj</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="icon" href="images/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="styles.css">
+  </head>
+  <body>
+    <h1>iCloud Private Relay</h1>
+    <img alt="Logo of Apple iCloud" src="images/iCloud.png"
+    height = 15% width = 15%>
+    <p class="date"><em><time datetime="2021-11-24"><b>Posted</b>: November 24th, 2021</time></em></p>
+    <p class="date"><em><time datetime="2022-04-04"><b>Last edited</b>: April 4th, 2022</time></em></p>
+    <p><a href="https://www.apple.com/">Apple</a> has come up with a privacy preserving web traffic relay for its Safari users. When we browse the web, we request DNS queries and our IP address gets sent to the DNS provider as well as the websites we visit. Apple has come up with a solution, which it states is "designed to protect your privacy by ensuring that when you browse the web in Safari". This article aims to explain how this works. iCloud Private Relay has three jobs to play:</p>
+        <ol type = "i">
+	    <li>Routing <a href="https://en.wikipedia.org/wiki/Domain_Name_System">DNS</a> queries via an oblivious DNS</li>
+        <li>Upgrades <a href="https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol">HTTP</a> requests to <a href="https://en.wikipedia.org/wiki/HTTPS">HTTPS</a> requests</li>
+	    <li>Hides user's <a href="https://en.wikipedia.org/wiki/IP_address">IP address</a> to the websites</li>
+        </ol>
+    <p>Apple claims "no single party—not even Apple—can see both who you are and what sites you're visiting." This means not even the Internet Service Provider (ISP) can snoop on the user. In this article, we'll discuss how this works.</p> <br>
+        <h2>1. Oblivious DNS over HTTPS (ODoH)</h2>
+    <p>Apple has partnered with <a href="https://www.cloudflare.com/">Cloudflare</a> and <a href="https://www.fastly.com/">Fastly</a> to set up <a href="https://blog.cloudflare.com/oblivious-dns/">oblivious DNS</a>, which we'll understand from the below diagram 👇</p> <br>
+        <img alt="A picture explaining how an oblivious DNS works" src="images/Cloudflare Oblivious DNS.png"
+        width = 100% height = 67%> <br>
+    <p>The user establishes an HTTPS connection with a proxy, which forwards the message from the user to the target. The user acts as the same in the case of DNS and <a href = "https://en.wikipedia.org/wiki/DNS_over_HTTPS">DoH</a>, and holds the encryption key (to encrypt queries to the target) as well as the decryption key (to decrypt the DNS's response). Cloudflare tells encryption and proxying has the following guarantees:</p>
+        <ol>
+            <li>The target sees only the query and the proxy’s IP address.</li>
+            <li>The proxy has no visibility into the DNS messages, with no ability to identify, read, or modify either the query being sent by the user or the answer being returned by the target.</li>
+            <li>Only the intended target can read the content of the query and produce a response.</li>
+        </ol>
+    <p>These three guarantees improve user privacy while maintaining the security and integrity of DNS queries. However, each of these guarantees relies on one fundamental property — that the proxy and the target servers do not collude. So long as there is no collusion, an attacker succeeds only if both the proxy and target are compromised. <br>
+    <br>    
+    Cloudflare tells it also adds end-to-end encryption between the user and the target, over TLS/HTTPS, to not make it anyhow possible for the ISP to know what sites is the user visiting or what is his/her IP address. The "target" here refers to the website as well as the DNS provider.<br>
+    <br>
+    Long story short, this means Cloudflare (1.1.1.1) as well as the website will not receive the user's IP address, having a great positive impact on user's privacy. </p> <br>
+    <p><b>Note:</b> The proxy here is the Egress proxy, which we'll discuss in the third section.</p> <br>
+    <h2>2. Upgrades HTTP requests to HTTPS</h2> <br>
+        <img alt="A picture demonstrating HTTP to HTTPS upgrade" src="images/HTTP To HTTPS.png"
+        width = 100% height = 67%> <br>  
+    <p>This upgrade is obvious, with HTTP the ISP can know exactly what the user is doing. Making this upgrade shifts a non-encrypted traffic to an encrypted traffic, helping in maintaining the "web of trust".</p> <br> 
+    <h2>3. Hiding IP address to websites</h2>
+    <p>In order to hide the user's IP address, Apple sets up two proxies:
+    </p>
+        <ol type = "a">
+            <li>Ingress Proxy</li>
+            <li>Egress Proxy</li>
+        </ol>
+    <h3>(a) Ingress Proxy</h3>
+    <p>
+        The Ingress proxy does the following things:
+    </p>
+        <ol type = "i">
+            <li>Accepts connection from the internet</li>
+            <li>Protects IP address from other servers</li>
+            <li>Encrypts all internet traffic</li>
+        </ol>
+    <h3>(b) Egress Proxy</h3>
+    <p>The Egress proxy does the following things:</p>
+        <ol type = "i">
+            <li>Accepts connection from the internet</li>
+            <li>Prevents Ingress proxy from seeing which websites are contacted</li>
+        </ol>
+    <p>After understanding these two proxies, let's dive into understanding how these works in order to protect user privacy with the below diagram 👇</p> <br>
+        <img alt="A picture explaining how iCloud Private Relay works" src="images/iCloud Private Relay.png"
+        width = 100% height = 67%> <br>
+    <p>The user connects to the Ingress proxy, which gets the IP address to know the area in which the user lives, via HTTPS. Then, the user requests to the Egress proxy via HTTPS, which knows the area where the user lives, and not the IP address with the requested website, and prevents the Ingress proxy from getting information about the requested website. With knowing the area in which the user lives, the Egress proxy assigns a random IP address from the area to the traffic, not using user's real IP address, and requests to the website, taking the information, moving back forth.</p>
+    <br>
+    <p>In order to make sure only one party doesn't have control over both the proxies, it may happen later in the future that the ingress proxy is operated by Apple and the egress proxy from Cloudflare or Fastly. <br>
+    <br>
+    <h2>Conclusion</h2>
+    <p>The whole iCloud Private Relay looks a good privacy step from Apple protecting user privacy to a great extent. From this the user can get assured:</p>
+    <br>
+        <ol type = "i">
+            <li>The DNS provider doesn't know him/her.</li>
+            <li>Insecure HTTP requests will be automatically upgraded to HTTPS.</li>
+            <li>The Ingress proxy doesn't know which site the user is visiting.</li>
+            <li>The Egress proxy doesn't know the IP address of the user.</li>
+            <li>The website knows the IP address of the Egress proxy, and not the user's real IP address.</li>
+        </ol>
+    <p>Currently iCloud Private Relay is in its Beta stage (in iOS 15, iPadOS 15, and macOS Monterey) and not available in all countries and regions. It requires an <a href = "https://support.apple.com/en-us/HT201238">iCloud+ subscription</a>.</p> <br>
+    <h2>Sources</h2>
+        <ol>
+            <li><a href="https://www.youtube.com/watch?v=4ds-ukcaYXg">iCloud Private Relay vs VPN vs Tor</a> - Sun Knudsen | YouTube</li>
+            <li><a href="https://support.apple.com/en-us/HT212614">About iCloud Private Relay</a> - Apple Support</li>
+            <li><a href="https://developer.apple.com/videos/play/wwdc2021/10085">Apple’s privacy pillars in focus</a> - Apple Developer</li>
+            <li><a href="https://blog.cloudflare.com/oblivious-dns/">Improving DNS Privacy with Oblivious DoH in 1.1.1.1</a> - The Cloudflare Blog</li>
+	        <li><a href="https://www.fool.com/investing/2021/09/01/why-fastly-and-cloudflare-stocks-jumped-and-akamai/">Why Fastly and Cloudflare Shares Jumped Today (and Akamai Ticked Higher)</a> - The Motley Fool</li>
+        </ol>
+    <br>
+    <button onclick="window.location.href='https://github.com/Nihal247';">
+        My GitHub
+    </button> <br>
+    <br>
+    <a href="https://github.com/Nihal247/nihal247.github.io/blob/main/LICENSE">MIT License</a> <br>
+    <br>
+    <a href="https://nihal247.github.io/privacy-policy">Privacy Policy</a>
+    </body>
+</html>
