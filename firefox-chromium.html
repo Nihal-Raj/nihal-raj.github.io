@@ -23,7 +23,7 @@
   <p>Firefox’s Fission project, fully rolled out in Firefox 95 (late 2021), aimed to match this. By March 2022, Fission was immature, inheriting weaknesses from Firefox’s baseline sandbox. By 2025, Fission has improved, with better site separation in Firefox 123 and later. However, it still lags Chromium in maturity. Cross-site leaks—where a compromised process accesses another site’s data—have been patched incrementally, but Firefox’s content process sandbox remains less restrictive, undermining Fission’s gains.</p>
 
   <h3 id="windows"><a href="#windows">1.2 Windows</a></h3>
-  <p>On Windows, Chromium uses a robust sandbox with strict process mitigations, like Arbitrary Code Guard (ACG) and Code Integrity Guard (CIG), enabled by default. Firefox, as of 2022, lacked these, exposing it to basic code execution exploits. By 2025, Firefox has adopted some Windows mitigations—ACG was added in Firefox 115 (2023)—but CIG remains absent, and its sandbox still permits broader system access than Chromium’s.</p>
+  <p>On Windows, Chromium uses a robust sandbox with strict process mitigations, like Arbitrary Code Guard (ACG) and Code Integrity Guard (CIG), enabled by default. Firefox, as of 2022, lacked these, exposing it to basic code execution exploits. By 2025, Firefox has adopted some Windows mitigations—ACG was added in Firefox 115 (2023)—but CIG remains absent, and its sandbox still permits broader system access than Chromium’s.<br> On the other side, Firefox has rolled out win32k lockdown.</p>
 
   <h3 id="linux"><a href="#linux">1.3 Linux</a></h3>
   <h4 id="linux-escapes"><a href="#linux-escapes">1.3.1 Linux Sandbox Escapes</a></h4>
