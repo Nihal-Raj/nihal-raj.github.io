@@ -29,8 +29,13 @@ p {
 
 a {
   color: purple;
+  text-decoration: none;
   font-family: 'Nobile', Helvetica, Arial;
   } 
+
+a:hover {
+    text-decoration: underline;
+  }
   
 em {
   font-family: 'Arial Narrow';
@@ -84,9 +89,13 @@ thead, tfoot {
     }
 
     a {
-      color: pink;
-      font-family: 'Nobile', Helvetica, Arial;
-      }
+    color: rgb(67, 216, 221);
+    text-decoration: none;
+    }
+
+    a:hover {
+    text-decoration: underline;
+    }
 
     li{
       color: #eeeeee;
