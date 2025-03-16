@@ -1,299 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="referrer" content="no-referrer">
-  <meta name="color-scheme" content="light dark">
-  <link rel="stylesheet" type="text/css" href="styles.css">
-  <title>Firefox and Chromium | Updated Security Analysis</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <meta name="color-scheme" content="light dark">
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <title>Firefox and Chromium | Updated Security Analysis</title>
 </head>
 <body>
-  <h1>Firefox and Chromium</h1>
-  <p class="date"><em><time datetime="2025-03-03">Last edited: March 3, 2025</time></em></p>
-  <p>Note: This is the continuation to the original <a href="https://madaidans-insecurities.github.io/firefox-chromium.html">post</a> by Madaidan, but since the original project hasn't updated in almost 3 years, I've decided to provide a new update on it with the help of <a href="https://grok.com">Grok AI</a>.</p>
+    <h1>Firefox and Chromium</h1>
+    <p class="date"><em><time datetime="2025-03-03">Last edited: March 3, 2025</time></em></p>
+    
+    <p>Firefox is often touted as a more secure browser due to Mozilla’s privacy-focused reputation. However, this perception conflates privacy with security—an error this article aims to correct. Here, we analyze Firefox’s security model against Chromium’s, focusing on their resistance to exploitation rather than privacy policies. Since the last update on March 19, 2022, both browsers have evolved, but significant gaps remain. This article covers process architecture, sandboxing, exploit mitigations, and more, updated to reflect the current state as of March 3, 2025.</p>
 
-  <p>Firefox is often touted as a more secure browser due to Mozilla’s privacy-focused reputation. However, this perception conflates privacy with security—an error this article aims to correct. Here, we analyze Firefox’s security model against Chromium’s, focusing on their resistance to exploitation rather than privacy policies. Since the last update on March 19, 2022, both browsers have evolved, but significant gaps remain. This article covers process architecture, sandboxing, exploit mitigations, and more, updated to reflect the current state as of March 3, 2025.</p>
+    <p>Firefox has a much weaker content sandbox across platforms.</p>
 
-  <h2 id="sandboxing"><a href="#sandboxing">1. Sandboxing</a></h2>
-  <p>A browser’s sandbox isolates processes to limit the damage of an exploit. Browsers handle untrusted input by design, making sandboxing critical. Without it, a vulnerability could compromise the entire system; with it, an attacker needs a sandbox escape too. But not all sandboxes are equal—strength lies in granularity and restrictions.</p>
+    <p>Their sandbox also doesn't have a full site isolation implementation so it can't fully defend sites from each other yet.</p>
 
-  <h3 id="site-isolation"><a href="#site-isolation">1.1 Site Isolation</a></h3>
-  <p>Chromium introduced site isolation in 2018, running each website in its own sandboxed renderer process. This isolates exploits and mitigates side-channel attacks like Spectre by leveraging process boundaries. As of 2025, Chromium’s implementation has matured further, with optimizations reducing performance overhead while maintaining strict separation.</p>
-  <p>Firefox’s Fission project, fully rolled out in Firefox 95 (late 2021), aimed to match this. By March 2022, Fission was immature, inheriting weaknesses from Firefox’s baseline sandbox. By 2025, Fission has improved, with better site separation in Firefox 123 and later. However, it still lags Chromium in maturity. Cross-site leaks—where a compromised process accesses another site’s data—have been patched incrementally, but Firefox’s content process sandbox remains less restrictive, undermining Fission’s gains.</p>
+    <p>Firefox is even less secure on Android and Linux. Firefox sandbox does less and is much weaker but there are other weaknesses.</p>
 
-  <h3 id="windows"><a href="#windows">1.2 Windows</a></h3>
-  <p>On Windows, Chromium uses a robust sandbox with strict process mitigations, like Arbitrary Code Guard (ACG) and Code Integrity Guard (CIG), enabled by default. Firefox, as of 2022, lacked these, exposing it to basic code execution exploits. By 2025, Firefox has adopted some Windows mitigations—ACG was added in Firefox 115 (2023)—but CIG remains absent, and its sandbox still permits broader system access than Chromium’s.<br> On the other side, Firefox has rolled out win32k lockdown.</p>
+    <p>Firefox sandbox is much weaker than Chromium on desktop Linux. The main difference is that Firefox doesn't have completed site isolation, so it only defends the overall OS from compromise rather than properly defending sites and browser data from sites (<a href="https://wiki.mozilla.org/Project_Fission">source</a>, <a href="https://bugzilla.mozilla.org/">Bugzilla</a>)</p>
 
-  <h3 id="linux"><a href="#linux">1.3 Linux</a></h3>
-  <h4 id="linux-escapes"><a href="#linux-escapes">1.3.1 Linux Sandbox Escapes</a></h4>
-  <p>In 2022, Firefox’s Linux sandbox had trivial escapes, like exposing X11 and PulseAudio to the content process. Chromium sandboxed these via dedicated processes. By 2025, Firefox has tightened this: X11 access is restricted in Firefox 120 (2024), and PulseAudio is now proxied. However, Chromium’s sandbox remains stricter, with fewer escape vectors due to its granular process model.</p>
-  <h4 id="seccomp-bpf"><a href="#seccomp-bpf">1.3.2 seccomp-bpf</a></h4>
-  <p>Linux’s seccomp-bpf filters syscalls to reduce kernel attack surface. In 2022, Firefox’s filter was lax, barely restricting ioctls—a massive attack surface. Chromium allowed only necessary ioctls. By 2025, Firefox’s seccomp filter (updated in Firefox 118, 2023) blocks more ioctls, but Chromium’s filter is still more restrictive, covering a broader range of syscalls and arguments.</p>
+    <h2 id="sandboxing"><a href="#sandboxing">1. Sandboxing</a></h2>
+    <p>Sandboxing isolates applications and restricts their resource access, preventing vulnerabilities in one program from compromising the entire system. Modern browsers use sandboxing extensively: they run multiple processes (content, GPU, RDD, etc.) each with <a href="https://en.wikipedia.org/wiki/Principle_of_least_privilege">minimal privileges</a>, processing untrusted input while minimizing attack surface. Without a sandbox, a browser exploit could hijack the entire system. With one, attackers need a second vulnerability to escape the sandbox, raising the bar significantly.</p>
+    
+    <p>Still, sandboxes vary in quality. A poorly implemented sandbox provides little real protection. For instance, <a href="https://wiki.mozilla.org/Security/Sandbox">Firefox’s sandboxing</a> has several known weaknesses, only some of which are listed below.</p>
 
-  <h3 id="android"><a href="#android">1.4 Android</a></h3>
-  <p>Firefox on Android adopted a multi-process model in 2021 but lacked sandboxing beyond the OS’s app sandbox in 2022. Chromium used <code>isolatedProcess</code> and a strict seccomp-bpf filter. In 2025, Firefox (version 125+) has basic sandboxing for content processes, but it’s less mature than Chromium’s, which now includes enhanced site isolation and tighter JNI restrictions.</p>
+    <h3 id="site-isolation"><a href="#site-isolation">1.1 Site Isolation</a></h3>
+    <p><a href="https://www.youtube.com/watch?v=OH-bt7spDgo">Site isolation</a>, introduced in Chromium in <a href="https://security.googleblog.com/2018/07/mitigating-spectre-with-site-isolation.html">2018</a>, revamped its multi-process architecture by assigning each website its own sandboxed renderer process.</p>
 
-  <h3 id="missing-processes"><a href="#missing-processes">1.5 Missing Processes</a></h3>
-  <p>Chromium’s granular process model—separate GPU, network, and RDD processes—allows tight sandboxing. In 2022, Firefox merged these into parent or content processes, weakening restrictions. By 2025, Firefox has a GPU process on Linux (since Firefox 119, 2023), but it’s unsandboxed, and other processes remain consolidated, trailing Chromium’s design.</p>
+    <p>This prevents renderer exploits from accessing data from other websites and is essential for mitigating side-channel attacks like <a href="https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)">Spectre</a>. OS-level protections only isolate at the process boundary, making process separation the most effective defense (<a href="https://www.chromium.org/Home/chromium-security/">Chromium Security Docs</a>, <a href="https://www.usenix.org/">USENIX Presentation</a>, <a href="https://chromium.googlesource.com/chromium/src/+/master/docs/security/side-channel-threat-model.md">Chromium Side-Channel Threat Model</a>). Current mitigations, like reducing JavaScript timer accuracy, are insufficient and fail to address the root issue (<a href="https://developer.chrome.com/blog/">Chrome Developer Blog</a>).</p>
 
-  <h2 id="exploit-mitigations"><a href="#exploit-mitigations">2. Exploit Mitigations</a></h2>
-  <h3 id="acg-cig"><a href="#acg-cig">2.1 Arbitrary Code Guard and Code Integrity Guard</a></h3>
-<p>Arbitrary Code Guard (ACG) prevents the introduction of new executable code in a process, while Code Integrity Guard (CIG) ensures only signed binaries execute. These Windows-specific mitigations are critical for thwarting exploits. Below is a comparison of their application across key processes in Chromium and Firefox as of March 3, 2025, updated from the original analysis in March 2022.</p>
+    <p>Firefox introduced Fission in Firefox 95 (<a href="https://www.mozilla.org/en-US/firefox/releases/">Firefox Release Notes</a>), but it remains less mature than Chromium’s site isolation and will require years to reach parity. Fission inherits the security weaknesses of Firefox’s content process sandbox (<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1505832">Bugzilla: 1505832</a>, <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1484019">Bugzilla: 1484019</a>) and is not a comprehensive solution.</p>
 
-<table>
-  <thead>
-    <tr>
-      <th>Process</th>
-      <th>Chromium ACG</th>
-      <th>Firefox ACG</th>
-      <th>Chromium CIG</th>
-      <th>Firefox CIG</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Browser (Main)</td>
-      <td>No</td>
-      <td>No</td>
-      <td>Yes</td>
-      <td>No</td>
-    </tr>
-    <tr>
-      <td>Renderer</td>
-      <td>Yes (JITless)</td>
-      <td>Yes</td>
-      <td>Yes</td>
-      <td>No</td>
-    </tr>
-    <tr>
-      <td>GPU</td>
-      <td>No</td>
-      <td>No</td>
-      <td>Yes</td>
-      <td>No</td>
-    </tr>
-    <tr>
-      <td>Network</td>
-      <td>No</td>
-      <td>No</td>
-      <td>Yes</td>
-      <td>No</td>
-    </tr>
-    <tr>
-      <td>Audio</td>
-      <td>Yes</td>
-      <td>No</td>
-      <td>Yes</td>
-      <td>No</td>
-    </tr>
-    <tr>
-      <td>Proxy Resolver</td>
-      <td>Yes</td>
-      <td>No</td>
-      <td>Yes</td>
-      <td>No</td>
-    </tr>
-    <tr>
-      <td>Icon Reader</td>
-      <td>Yes</td>
-      <td>No</td>
-      <td>Yes</td>
-      <td>No</td>
-    </tr>
-    <tr>
-      <td>Socket</td>
-      <td>No</td>
-      <td>Yes</td>
-      <td>Yes</td>
-      <td>Yes</td>
-    </tr>
-    <tr>
-      <td>RDD</td>
-      <td>No</td>
-      <td>No</td>
-      <td>Yes</td>
-      <td>Yes</td>
-    </tr>
-  </tbody>
-</table>
+    <p>Additionally, cross-site leaks in Fission allow compromised processes to bypass site isolation and access data from other sites (<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1707955">Bugzilla: 1707955</a>).</p>
 
-<p><strong>Notes (March 3, 2025):</strong></p>
-<ul>
-  <li><strong>Chromium:</strong> ACG is enabled in renderer processes only with JITless mode due to JIT’s writable-executable memory needs; CIG remains broadly applied across all listed processes. No significant expansion since 2022 reflects an already robust baseline.</li>
-  <li><strong>Firefox:</strong> ACG was added to the renderer process in Firefox 115 (2023) and is active in the now-enabled socket process (since Firefox 118, 2023). CIG is limited to socket and RDD processes, with no broader adoption. Firefox has improved but trails Chromium’s granularity.</li>
-  <li><strong>Gap:</strong> Chromium’s wider ACG/CIG coverage across more processes underscores its stronger mitigation model, despite Firefox’s progress.</li>
-</ul>
-  <h3 id="cfi"><a href="#cfi">2.2 Control Flow Integrity (CFI)</a></h3>
-  <p>CFI prevents code hijacking. Chromium uses Clang’s forward-edge CFI on Linux/Android and Control Flow Guard on Windows. Firefox lacked CFI in 2022. By 2025, Firefox 121 (2024) introduced coarse-grained forward-edge CFI on Linux, but it’s less comprehensive than Chromium’s, and backward-edge CFI (e.g., SafeStack) is still missing.</p>
-  <h3 id="fonts"><a href="#fonts">2.3 Untrusted Fonts Blocking</a></h3>
-  <p>Chromium blocks untrusted fonts to reduce attack surface; Firefox didn’t in 2022. By 2025, Firefox 124 (2024) restricts font loading in sandboxed processes, catching up but not surpassing Chromium’s stricter defaults.</p>
-  <h3 id="jit"><a href="#jit">2.4 JIT Hardening</a></h3>
-  <p>Both browsers use JIT compilers, requiring writable-executable memory—a security risk. Chromium’s JIT mitigations (e.g., partitioning) were stronger in 2022. In 2025, Firefox (via Firefox 122, 2024) has adopted similar hardening, narrowing the gap, though Chromium’s implementation remains more battle-tested.</p>
-  <h3 id="memory-allocator"><a href="#memory-allocator">2.5 Memory Allocator Hardening</a></h3>
-<p>Memory allocators manage heap memory, and hardening them reduces the risk of exploits like use-after-free or buffer overflows. In 2022, Chromium’s custom <code>PartitionAlloc</code> outclassed Firefox’s reliance on system allocators. As of March 3, 2025, the landscape has evolved:</p>
-<ul>
-  <li><strong>Chromium:</strong> Uses <code>PartitionAlloc</code> (enhanced with <code>MiraclePtr</code>), featuring guard pages, randomization, and use-after-free mitigations like delayed freeing. It remains a hardened, exploit-resistant allocator.</li>
-  <li><strong>Firefox:</strong> Adopted <code>mozjemalloc</code> with guard pages and randomization by Firefox 118 (2023), improving over system allocators. However, it lacks advanced features like <code>MiraclePtr</code> or delayed freeing.</li>
-  <li><strong>Gap:</strong> Firefox has closed some ground, but Chromium’s allocator offers deeper protections, maintaining an edge against heap-based attacks.</li>
-</ul>
+    <h3 id="windows"><a href="#windows">1.2 Windows</a></h3>
+    <p>On Windows, Chromium uses a robust sandbox with strict process mitigations, like Arbitrary Code Guard (ACG) and Code Integrity Guard (CIG), enabled by default. Firefox, as of 2022, lacked these, exposing it to basic code execution exploits. By 2025, Firefox has adopted some Windows mitigations—ACG was added in Firefox 115 (2023)—but CIG remains absent, and its sandbox still permits broader system access than Chromium’s.</p>
 
-<h3 id="auto-var-init"><a href="#auto-var-init">2.6 Automatic Variable Initialisation</a></h3>
-<p>Uninitialized variables can leak data or enable control flow hijacking. In 2022, Chromium mitigated this with automatic stack variable initialization, while Firefox did not. As of March 3, 2025:</p>
-<ul>
-  <li><strong>Chromium:</strong> Continues to use Clang’s <code>-ftrivial-auto-var-init=zero</code> in release builds, zero-initializing stack variables to prevent exploits.</li>
-  <li><strong>Firefox:</strong> Has not enabled automatic initialization by default in release builds (e.g., Firefox 125), despite trials in Nightly (Bug 1495987). Performance trade-offs keep it opt-in, leaving gaps in protection.</li>
-  <li><strong>Gap:</strong> Chromium’s systematic approach still outpaces Firefox, reducing a preventable class of vulnerabilities Firefox remains exposed to.</li>
-</ul>
+    <p>As of Firefox 100, released in May 2022, Mozilla has <a href="https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100/">implemented Win32k Lockdown</a> for content processes on Windows. This security feature restricts access to certain system calls, reducing the attack surface and making sandbox escapes more difficult.</p>
+    
+    <p>While Chromium implemented Win32k Lockdown earlier, in 2016, Firefox has since adopted similar measures to enhance its sandboxing capabilities on Windows.</p>
 
-  <h2 id="misc"><a href="#misc">3. Miscellaneous</a></h2>
-  <p>Firefox’s smaller market share doesn’t inherently make it safer—attackers target vulnerabilities, not popularity. Chromium’s larger user base drives faster patching and exploit mitigation development. Mozilla has improved Firefox since 2022, but its security focus still trails Chromium’s engineering rigor.</p>
+    <h3 id="linux"><a href="#linux">1.3 Linux</a></h3>
+    <p>Firefox's sandboxing on platforms like Linux is significantly weaker. The restrictions are relatively lenient, leaving it vulnerable to various sandbox escape exploits that have persisted for years. Furthermore, it exposes a substantial attack surface even within the sandbox environment.</p>
 
-  <h2 id="experts"><a href="#experts">4. Expert Opinions</a></h2>
-  <p>
-    Many security experts also share these views about Firefox, and a few examples are listed below:
-  </p>
+    <p>On the other hand, Firefox <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1129492">no longer exposes X11 to the content process</a> and proxies PulseAudio. Chromium restricts access to a <a href="https://github.com/chromium/chromium/blob/master/services/audio/audio_sandbox_hook_linux.cc">dedicated audio service</a>, addressing this issue.</p>
 
+    <p><a href="https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html">Seccomp-BPF</a> is a Linux sandboxing technology that enables the restriction of system calls available to a process, significantly reducing the kernel's attack surface and serving as a fundamental component of most Linux sandboxing mechanisms.</p>
+
+    <p>Firefox is not utilizing it the same way Chromium is (<a href="https://searchfox.org/mozilla-central/rev/9ae77e4ce3378bd683ac9a86b729ea6b6bd22cb8/security/sandbox/linux/SandboxFilter.cpp#1291">source</a>, <a href="https://bugzilla.mozilla.org/">Bugzilla</a>).</p>
+    
+    <p>This is the main way out of the sandbox and is leveraged in most real world browser exploits. It's easier to exploit the kernel than the browser broker process in practice.</p>
+
+    <p>For X11 on Linux, <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1653444">Firefox does not have a separate GPU process</a>, and therefore, no GPU process sandboxing is implemented.</p>
+
+    <p>Firefox lacks a separate audio process, unlike Chromium which has a dedicated audio service. In Firefox, audio functionality is integrated directly into the content process, leading to vulnerabilities such as the PulseAudio sandbox escape on Linux systems.</p>
+
+    <h3 id="android"><a href="#android">1.4 Android</a></h3>
+    <p>Avoid using Firefox-based browsers like Firefox on Android due to:</p>
+    <p>Increased Vulnerability: Firefox lacks internal sandboxing, unlike Chromium which uses Android's isolatedProcess for strong isolation.</p>
+    <p>Sandboxing Deficiency: Even on desktop, Firefox's sandbox is weaker, particularly on Linux, with limited site isolation compared to Chromium. Android version lags further in sandbox improvements.</p>
+
+    <h2 id="exploit-mitigations"><a href="#exploit-mitigations">2. Exploit Mitigations</a></h2>
+    <h3 id="acg-cig"><a href="#acg-cig">2.1 Arbitrary Code Guard and Code Integrity Guard</a></h3>
+  <p>Arbitrary Code Guard (ACG) prevents the introduction of new executable code in a process, while Code Integrity Guard (CIG) ensures only signed binaries execute. These Windows-specific mitigations are critical for thwarting exploits. Below is a comparison of their application across key processes in Chromium and Firefox as of March 3, 2025, updated from the original analysis in March 2022.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>Process</th>
+        <th>Chromium ACG</th>
+        <th>Firefox ACG</th>
+        <th>Chromium CIG</th>
+        <th>Firefox CIG</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Browser (Main)</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Renderer</td>
+        <td>Yes (JITless)</td>
+        <td>Yes</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>GPU</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Network</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Audio</td>
+        <td>Yes</td>
+        <td>No</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Proxy Resolver</td>
+        <td>Yes</td>
+        <td>No</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Icon Reader</td>
+        <td>Yes</td>
+        <td>No</td>
+        <td>Yes</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Socket</td>
+        <td>No</td>
+        <td>Yes</td>
+        <td>Yes</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td>RDD</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Yes</td>
+        <td>Yes</td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <p><strong>Notes (March 3, 2025):</strong></p>
   <ul>
-    <li class="lilist">
-      thegrugq, information security researcher: <br>
-      <a href="https://medium.com/@thegrugq/tor-and-its-discontents-ef5164845908">Tor and its Discontents</a>
-    </li>
-
-    <li class="lilist">
-      Kenn White, security researcher: <br>
-      <a href="https://twitter.com/kennwhite/status/804142071133126656">https://twitter.com/kennwhite/status/804142071133126656</a>
-    </li>
-
-    <li class="lilist">
-      PaXTeam, developer of PaX: <br>
-      <a href="https://archive.fo/9aBLk">https://archive.fo/9aBLk</a>
-    </li>
-
-    <li class="lilist">
-      Daniel Micay, lead developer of GrapheneOS: <br>
-      <a href="https://grapheneos.org/usage#web-browsing">https://grapheneos.org/usage#web-browsing</a>
-    </li>
-
-    <li class="lilist">
-      Matthew Garrett, Linux developer: <br>
-      <a href="https://news.ycombinator.com/item?id=13800323">https://news.ycombinator.com/item?id=13800323</a>
-    </li>
-
-    <li class="lilist">
-      Dan Guido, CEO of Trail of Bits: <br>
-      <a href="https://news.ycombinator.com/item?id=13623735">https://news.ycombinator.com/item?id=13623735</a>
-    </li>
-
-    <li class="lilist">
-      Theo de Raadt, lead developer of OpenBsd: <br>
-      <a href="https://marc.info/?l=openbsd-misc&m=152872551609819&w=2">https://marc.info/?l=openbsd-misc&m=152872551609819&w=2</a>
-    </li>
-
-    <li class="lilist">
-      Thomas Ptacek, co-founder of Latacora and Matasano Security: <br>
-      <a href="https://twitter.com/tqbf/status/930807512609296384">https://twitter.com/tqbf/status/930807512609296384</a>, <br>
-      <a href="https://twitter.com/tqbf/status/930860544927649792">https://twitter.com/tqbf/status/930860544927649792</a>, <br>
-      <a href="https://twitter.com/tqbf/status/830511154950766595">https://twitter.com/tqbf/status/830511154950766595</a>
-    </li>
-
-    <li class="lilist">
-       qwertyoruiopz, iOS exploit developer: <br>
-      <a href="https://twitter.com/qwertyoruiopz/status/805887567493271556">https://twitter.com/qwertyoruiopz/status/805887567493271556</a>, <br>
-      <a href="https://twitter.com/qwertyoruiopz/status/730704655748075520">https://twitter.com/qwertyoruiopz/status/730704655748075520</a>
-    </li>
-
-    <li class="lilist">
-      John Wu, Android security engineer: <br>
-      <a href="https://twitter.com/topjohnwu/status/1105739918444253184">https://twitter.com/topjohnwu/status/1105739918444253184</a>, <br>
-      <a href="https://twitter.com/topjohnwu/status/1455606288419733505">https://twitter.com/topjohnwu/status/1455606288419733505</a>
-    </li>
-
-    <li class="lilist">
-      Chris Rohlf, security engineer: <br>
-      <a href="https://twitter.com/chrisrohlf/status/1455549993536966671">https://twitter.com/chrisrohlf/status/1455549993536966671</a>
-    </li>
-
-    <li class="lilist">
-      Matthew Green, cryptographer at Johns Hopkins University: <br>
-      <a href="https://twitter.com/matthew_d_green/status/830488564672626690">https://twitter.com/matthew_d_green/status/830488564672626690</a>
-    </li>
-
-    <li class="lilist">
-      Bruno Keith, security researcher at Dataflow Security: <br>
-      <a href="https://twitter.com/bkth_/status/1265971734777380865">https://twitter.com/bkth_/status/1265971734777380865</a>
-    </li>
-
-    <li class="lilist">
-      Niklas Baumstark, security researcher at Dataflow Security: <br>
-      <a href="https://twitter.com/_niklasb/status/1131129708073107456">https://twitter.com/_niklasb/status/1131129708073107456</a>
-    </li>
-
-    <li class="lilist">
-      The Tor Project investigating ways to harden the Tor Browser; in particular, they conclude that Firefox is too poorly written
-      for them to apply PaX's Reuse Attack Protector (in comparison, <a href="https://twitter.com/paxteam/status/730902448018231300">
-      RAP can be applied to Chromium with relatively little effort</a>): <br>
-      <a href="https://gitlab.torproject.org/tpo/applications/tor-browser/-/wikis/Hardening">https://gitlab.torproject.org/tpo/applications/tor-browser/-/wikis/Hardening</a>
-    </li>
-
-    <li class="lilist">
-      Alex Gaynor, former Firefox security engineer and sandboxing lead: <br>
-      <a href="https://news.ycombinator.com/item?id=22342352">https://news.ycombinator.com/item?id=22342352</a>
-    </li>
-  
-    <li class="lilist">
-      Security researchersz like Daniel Micay (GrapheneOS) and Joanna Rutkowska (QubesOS) have long favored Chromium’s model. As of 2025, this consensus holds—Firefox’s progress doesn’t close the gap entirely.
-    </li>
-
-  <h2 id="conclusion"><a href="#conclusion">Conclusion</a></h2>
-  
-  <p>
-    Chromium is still more secure than Firefox, though the gap has narrowed since March 2022. Both browsers have made strides in bolstering their security architectures, but Chromium maintains a consistent edge due to its more mature, granular, and rigorously implemented security model.
-  </p><br>
-
-  <details>
-    <summary><a href="#sources">Sources</a></summary>
-    <ul>
-    <li>Original Article: <a href="https://madaidans-insecurities.github.io/firefox-chromium.html">https://madaidans-insecurities.github.io/firefox-chromium.html</a> (Last edited: March 19, 2022).</li>
-    <li>Firefox Release Notes: <a href="https://www.mozilla.org/en-US/firefox/releases/">https://www.mozilla.org/en-US/firefox/releases/</a>.</li>
-    <li>Chromium Blog: <a href="https://blog.chromium.org/">https://blog.chromium.org/</a>.</li>
-    <li>Chromium Security: <a href="https://www.chromium.org/security/">https://www.chromium.org/security/</a>.</li>
-    <li>Fission Announcement: <a href="https://hacks.mozilla.org/2021/05/introducing-firefox-fission-site-isolation/">https://hacks.mozilla.org/2021/05/introducing-firefox-fission-site-isolation/</a>.</li>
-    <li>Mozilla Bugzilla: <a href="https://bugzilla.mozilla.org/">https://bugzilla.mozilla.org/</a> (e.g., Bugs 1565198, 1785762, 1798291, 1759876, 1719995, 1802345, 1813456, 1798765).</li>
-    <li>Chromium Site Isolation: <a href="https://www.chromium.org/developers/design-documents/site-isolation/">https://www.chromium.org/developers/design-documents/site-isolation/</a>.</li>
-    <li>Chromium Sandbox Docs: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/design/sandbox.md">https://chromium.googlesource.com/chromium/src/+/main/docs/design/sandbox.md</a>.</li>
-    <li>Firefox Sandbox Wiki: <a href="https://wiki.mozilla.org/Security/Sandbox">https://wiki.mozilla.org/Security/Sandbox</a>.</li>
-    <li>Chromium seccomp-bpf: <a href="https://chromium.googlesource.com/chromium/src/+/main/sandbox/linux/seccomp-bpf/">https://chromium.googlesource.com/chromium/src/+/main/sandbox/linux/seccomp-bpf/</a>.</li>
-    <li>Chromium Android Sandbox: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/android_sandboxing.md">https://chromium.googlesource.com/chromium/src/+/main/docs/android_sandboxing.md</a>.</li>
-    <li>Firefox Android Multi-Process: <a href="https://hacks.mozilla.org/2021/08/firefox-on-android/">https://hacks.mozilla.org/2021/08/firefox-on-android/</a>.</li>
-    <li>Chromium Process Model: <a href="https://www.chromium.org/developers/design-documents/process-models/">https://www.chromium.org/developers/design-documents/process-models/</a>.</li>
-    <li>Chromium Sandbox Design Documentation: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/design/sandbox.md">https://chromium.googlesource.com/chromium/src/+/main/docs/design/sandbox.md</a></li>
-    <li>Chromium Security FAQ: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/security/faq.md">https://chromium.googlesource.com/chromium/src/+/main/docs/security/faq.md</a></li>
-    <li>Mozilla Bugzilla - ACG in Renderer Process: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1785762">https://bugzilla.mozilla.org/show_bug.cgi?id=1785762</a> (Bug 1785762)</li>
-    <li>Mozilla Bugzilla - Socket Process Enhancements: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1378417">https://bugzilla.mozilla.org/show_bug.cgi?id=1378417</a> (Bug 1378417)</li>
-    <li>Firefox win32k Rollout: <a href="https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100">https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100</a></li>
-    <li>Firefox no longer expose X11 to the content process: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1129492">https://bugzilla.mozilla.org/show_bug.cgi?id=1129492</a></li>
-    <li>Firefox enabled ACG on the utility process: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">https://bugzilla.mozilla.org/show_bug.cgi?id=1765372</a></li>
-    <li>Firefox Sandbox Wiki: <a href="https://wiki.mozilla.org/Security/Sandbox">https://wiki.mozilla.org/Security/Sandbox</a></li>
-    <li>Mozilla Firefox Release Notes: <a href="https://www.mozilla.org/en-US/firefox/releases/">https://www.mozilla.org/en-US/firefox/releases/</a></li>
-    <li>Chromium CFI: <a href="https://www.chromium.org/developers/testing/control-flow-integrity/">https://www.chromium.org/developers/testing/control-flow-integrity/</a>.</li>
-    <li>Chromium Fonts: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/security/fonts.md">https://chromium.googlesource.com/chromium/src/+/main/docs/security/fonts.md</a>.</li>
-    <li>Chromium JIT Hardening: <a href="https://blog.chromium.org/2020/05/hardening-javascript-jit-compiler.html">https://blog.chromium.org/2020/05/hardening-javascript-jit-compiler.html</a>.</li>
-    <li>Chromium PartitionAlloc: <a href="https://chromium.googlesource.com/chromium/src/+/main/base/allocator/partition_allocator/">https://chromium.googlesource.com/chromium/src/+/main/base/allocator/partition_allocator/</a></li>
-    <li>Firefox mozjemalloc Bug: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1673491">https://bugzilla.mozilla.org/show_bug.cgi?id=1673491</a> (Bug 1673491)</li>
-    <li>Mozilla Performance Wiki (Allocator): <a href="https://wiki.mozilla.org/Performance/Memory/Allocator">https://wiki.mozilla.org/Performance/Memory/Allocator</a></li>
-    <li>Chromium Clang Usage (Automatic Variable Initialisation): <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/security/faq.md">https://chromium.googlesource.com/chromium/src/+/main/docs/security/faq.md</a></li>
-    <li>Firefox Bugzilla (Automatic Variable Initialisation): <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1495987">https://bugzilla.mozilla.org/show_bug.cgi?id=1495987</a> (Bug 1495987)</li>
-    <li>GrapheneOS Usage Guide: <a href="https://grapheneos.org/usage#web-browsing">https://grapheneos.org/usage#web-browsing</a>.</li>
-    <li>Daniel Micay Reddit: <a href="https://old.reddit.com/r/GrapheneOS/comments/ciizae/vanadium_and_bromium_privacy/ev6m2ot/?context=3">https://old.reddit.com/r/GrapheneOS/comments/ciizae/vanadium_and_bromium_privacy/ev6m2ot/?context=3</a>.</li>
-    <li>Daniel Micay Twitter Archive: <a href="https://web.archive.org/web/20201106071605/https://twitter.com/DanielMicay/status/1154510616222142467">https://web.archive.org/web/20201106071605/https://twitter.com/DanielMicay/status/1154510616222142467</a>.</li>
-    <li>QubesOS Browser Docs: <a href="https://www.qubes-os.org/doc/browser-vm/">https://www.qubes-os.org/doc/browser-vm/</a>.</li>
-    <li>Joanna Rutkowska Resources: <a href="https://invisiblethingslab.com/resources.html">https://invisiblethingslab.com/resources.html</a>.</li>
-    <li>Recent GrapheneOS Tweet: <a href="https://x.com/GrapheneOS/status/1861538183038607398">https://x.com/GrapheneOS/status/1861538183038607398</a>.</li>
-    <li>Another recent Graphenweet: <a href="https://x.com/GrapheneOS/status/1864441441843359961">https://x.com/GrapheneOS/status/1864441441843359961</a>.</li>
+    <li><strong>Chromium:</strong> ACG is enabled in renderer processes only with JITless mode due to JIT’s writable-executable memory needs; CIG remains broadly applied across all listed processes. No significant expansion since 2022 reflects an already robust baseline.</li>
+    <li><strong>Firefox:</strong> ACG was added to the renderer process in Firefox 115 (2023) and is active in the now-enabled socket process (since Firefox 118, 2023). CIG is limited to socket and RDD processes, with no broader adoption. Firefox has improved but trails Chromium’s granularity.</li>
+    <li><strong>Gap:</strong> Chromium’s wider ACG/CIG coverage across more processes underscores its stronger mitigation model, despite Firefox’s progress.</li>
   </ul>
-  </details>
+    <h3 id="cfi"><a href="#cfi">2.2 Control Flow Integrity (CFI)</a></h3>
+    <p>CFI prevents code hijacking. Chromium uses Clang’s forward-edge CFI on Linux/Android and Control Flow Guard on Windows. Firefox lacked CFI in 2022. By 2025, Firefox 121 (2024) introduced coarse-grained forward-edge CFI on Linux, but it’s less comprehensive than Chromium’s, and backward-edge CFI (e.g., SafeStack) is still missing.</p>
+    <h3 id="fonts"><a href="#fonts">2.3 Untrusted Fonts Blocking</a></h3>
+    <p>Chromium blocks untrusted fonts to reduce attack surface; Firefox didn’t in 2022. By 2025, Firefox 124 (2024) restricts font loading in sandboxed processes, catching up but not surpassing Chromium’s stricter defaults.</p>
+    <h3 id="jit"><a href="#jit">2.4 JIT Hardening</a></h3>
+    <p>Both browsers use JIT compilers, requiring writable-executable memory—a security risk. Chromium’s JIT mitigations (e.g., partitioning) were stronger in 2022. In 2025, Firefox (via Firefox 122, 2024) has adopted similar hardening, narrowing the gap, though Chromium’s implementation remains more battle-tested.</p>
+    <h3 id="memory-allocator"><a href="#memory-allocator">2.5 Memory Allocator Hardening</a></h3>
+  <p>Memory allocators manage heap memory, and hardening them reduces the risk of exploits like use-after-free or buffer overflows. In 2022, Chromium’s custom <code>PartitionAlloc</code> outclassed Firefox’s reliance on system allocators. As of March 3, 2025, the landscape has evolved:</p>
+  <ul>
+    <li><strong>Chromium:</strong> Uses <code>PartitionAlloc</code> (enhanced with <code>MiraclePtr</code>), featuring guard pages, randomization, and use-after-free mitigations like delayed freeing. It remains a hardened, exploit-resistant allocator.</li>
+    <li><strong>Firefox:</strong> Adopted <code>mozjemalloc</code> with guard pages and randomization by Firefox 118 (2023), improving over system allocators. However, it lacks advanced features like <code>MiraclePtr</code> or delayed freeing.</li>
+    <li><strong>Gap:</strong> Firefox has closed some ground, but Chromium’s allocator offers deeper protections, maintaining an edge against heap-based attacks.</li>
+  </ul>
   
-  <p class="p-final">Thank You</p>
+  <h3 id="auto-var-init"><a href="#auto-var-init">2.6 Automatic Variable Initialisation</a></h3>
+  <p>Uninitialized variables can leak data or enable control flow hijacking. In 2022, Chromium mitigated this with automatic stack variable initialization, while Firefox did not. As of March 3, 2025:</p>
+  <ul>
+    <li><strong>Chromium:</strong> Continues to use Clang’s <code>-ftrivial-auto-var-init=zero</code> in release builds, zero-initializing stack variables to prevent exploits.</li>
+    <li><strong>Firefox:</strong> Has not enabled automatic initialization by default in release builds (e.g., Firefox 125), despite trials in Nightly (Bug 1495987). Performance trade-offs keep it opt-in, leaving gaps in protection.</li>
+    <li><strong>Gap:</strong> Chromium’s systematic approach still outpaces Firefox, reducing a preventable class of vulnerabilities Firefox remains exposed to.</li>
+  </ul>
+  
+    <p>Firefox doesn't deploy basic mitigations like type-based CFI anyway. Since it doesn't even use Clang CFI yet, it really says a lot about it (Source).</p>
+
+    <p>Similarly far less JIT hardening in Firefox. One of the major differences is that Chromium has a massive level of fuzzing, auditing, etc. compared to Firefox. Google also monitors for in the wild exploits so they get often caught to both fix the bugs and learn from the exploits.</p>
+
+    <p>They probably don't catch the majority of exploits used in the wild but they catch enough to regularly learn from how attackers are actually exploiting the browser and then implement defenses against the real world attacks.</p>
+
+    <p>There are other major advantages of Chromium: Oilpan + MiraclePtr + PartitionAlloc defending against the main sources of heap corruption, no real equivalent in Firefox.</p>
+
+    <p>Oilpan (garbage collection for C++ objects) and MiraclePtr (use-after-free protection for non-Oilpan objects) are massive defenses against the main forms of memory corruption bugs in browsers (use-after-free). PartitionAlloc is also a major upgrade over jemalloc in Firefox.</p>
+
+    <p>For jemalloc to approach the security characteristics of Oilpan + MiraclePtr, it would need to transform from a conventional allocator into a full-fledged memory safety runtime. This means embedding garbage collection or reference tracking mechanisms, implementing pointer validation infrastructure, quarantining freed memory, integrating closely with compilers and language runtimes, and accepting significant performance and complexity overheads.</p>
+
+    <p>V8 sandbox providing a whole other layer of sandboxing for most JS bugs.</p>
+
+    <p>Chromium recently added the V8 sandbox which is a whole extra layer of sandboxing for the overall majority of attacks on browsers targeting the JavaScript runtime.</p>
+
+    <p>Firefox does not employ a hardened memory allocator; it currently uses mozjemalloc, which is derived from jemalloc. Jemalloc focuses primarily on performance rather than security, making it vulnerable to exploitation. While mozjemalloc does introduce some security enhancements to jemalloc, these are insufficient to address the fundamental architectural vulnerabilities. On the other hand, Chromium has implemented PartitionAlloc across its entire codebase through the "PartitionAlloc-Everywhere" initiative.</p>
+
+    <p>PartitionAlloc is significantly more secure than mozjemalloc.</p>
+
+    <p>I decided to take this format from Madaidans and update it, so you can think of this as a updated version of the Firefox and Chromium article.</p>
+
+
+    <h2 id="misc"><a href="#misc">3. Miscellaneous</a></h2>
+    <p>Firefox’s smaller market share doesn’t inherently make it safer—attackers target vulnerabilities, not popularity. Chromium’s larger user base drives faster patching and exploit mitigation development. Mozilla has improved Firefox since 2022, but its security focus still trails Chromium’s engineering rigor.</p>
+  
+    <h2 id="experts"><a href="#experts">4. Expert Opinions</a></h2>
+    <p>
+      Many security experts also share these views about Firefox, and a few examples are listed below:
+    </p>
+  
+    <ul>
+      <li class="lilist">
+        thegrugq, information security researcher: <br>
+        <a href="https://medium.com/@thegrugq/tor-and-its-discontents-ef5164845908">Tor and its Discontents</a>
+      </li>
+  
+      <li class="lilist">
+        Kenn White, security researcher: <br>
+        <a href="https://twitter.com/kennwhite/status/804142071133126656">https://twitter.com/kennwhite/status/804142071133126656</a>
+      </li>
+  
+      <li class="lilist">
+        PaXTeam, developer of PaX: <br>
+        <a href="https://archive.fo/9aBLk">https://archive.fo/9aBLk</a>
+      </li>
+  
+      <li class="lilist">
+        Daniel Micay, lead developer of GrapheneOS: <br>
+        <a href="https://grapheneos.org/usage#web-browsing">https://grapheneos.org/usage#web-browsing</a>
+      </li>
+  
+      <li class="lilist">
+        Matthew Garrett, Linux developer: <br>
+        <a href="https://news.ycombinator.com/item?id=13800323">https://news.ycombinator.com/item?id=13800323</a>
+      </li>
+  
+      <li class="lilist">
+        Dan Guido, CEO of Trail of Bits: <br>
+        <a href="https://news.ycombinator.com/item?id=13623735">https://news.ycombinator.com/item?id=13623735</a>
+      </li>
+  
+      <li class="lilist">
+        Theo de Raadt, lead developer of OpenBsd: <br>
+        <a href="https://marc.info/?l=openbsd-misc&m=152872551609819&w=2">https://marc.info/?l=openbsd-misc&m=152872551609819&w=2</a>
+      </li>
+  
+      <li class="lilist">
+        Thomas Ptacek, co-founder of Latacora and Matasano Security: <br>
+        <a href="https://twitter.com/tqbf/status/930807512609296384">https://twitter.com/tqbf/status/930807512609296384</a>, <br>
+        <a href="https://twitter.com/tqbf/status/930860544927649792">https://twitter.com/tqbf/status/930860544927649792</a>, <br>
+        <a href="https://twitter.com/tqbf/status/830511154950766595">https://twitter.com/tqbf/status/830511154950766595</a>
+      </li>
+  
+      <li class="lilist">
+         qwertyoruiopz, iOS exploit developer: <br>
+        <a href="https://twitter.com/qwertyoruiopz/status/805887567493271556">https://twitter.com/qwertyoruiopz/status/805887567493271556</a>, <br>
+        <a href="https://twitter.com/qwertyoruiopz/status/730704655748075520">https://twitter.com/qwertyoruiopz/status/730704655748075520</a>
+      </li>
+  
+      <li class="lilist">
+        John Wu, Android security engineer: <br>
+        <a href="https://twitter.com/topjohnwu/status/1105739918444253184">https://twitter.com/topjohnwu/status/1105739918444253184</a>, <br>
+        <a href="https://twitter.com/topjohnwu/status/1455606288419733505">https://twitter.com/topjohnwu/status/1455606288419733505</a>
+      </li>
+  
+      <li class="lilist">
+        Chris Rohlf, security engineer: <br>
+        <a href="https://twitter.com/chrisrohlf/status/1455549993536966671">https://twitter.com/chrisrohlf/status/1455549993536966671</a>
+      </li>
+  
+      <li class="lilist">
+        Matthew Green, cryptographer at Johns Hopkins University: <br>
+        <a href="https://twitter.com/matthew_d_green/status/830488564672626690">https://twitter.com/matthew_d_green/status/830488564672626690</a>
+      </li>
+  
+      <li class="lilist">
+        Bruno Keith, security researcher at Dataflow Security: <br>
+        <a href="https://twitter.com/bkth_/status/1265971734777380865">https://twitter.com/bkth_/status/1265971734777380865</a>
+      </li>
+  
+      <li class="lilist">
+        Niklas Baumstark, security researcher at Dataflow Security: <br>
+        <a href="https://twitter.com/_niklasb/status/1131129708073107456">https://twitter.com/_niklasb/status/1131129708073107456</a>
+      </li>
+  
+      <li class="lilist">
+        The Tor Project investigating ways to harden the Tor Browser; in particular, they conclude that Firefox is too poorly written
+        for them to apply PaX's Reuse Attack Protector (in comparison, <a href="https://twitter.com/paxteam/status/730902448018231300">
+        RAP can be applied to Chromium with relatively little effort</a>): <br>
+        <a href="https://gitlab.torproject.org/tpo/applications/tor-browser/-/wikis/Hardening">https://gitlab.torproject.org/tpo/applications/tor-browser/-/wikis/Hardening</a>
+      </li>
+  
+      <li class="lilist">
+        Alex Gaynor, former Firefox security engineer and sandboxing lead: <br>
+        <a href="https://news.ycombinator.com/item?id=22342352">https://news.ycombinator.com/item?id=22342352</a>
+      </li>
+    
+      <li class="lilist">
+        Security researchersz like Daniel Micay (GrapheneOS) and Joanna Rutkowska (QubesOS) have long favored Chromium’s model. As of 2025, this consensus holds—Firefox’s progress doesn’t close the gap entirely.
+      </li>
+  
+    <h2 id="conclusion"><a href="#conclusion">Conclusion</a></h2>
+    
+    <p>
+      Chromium is still more secure than Firefox, though the gap has narrowed since March 2022. Both browsers have made strides in bolstering their security architectures, but Chromium maintains a consistent edge due to its more mature, granular, and rigorously implemented security model.
+    </p><br>  
+
+    <details>
+        <summary><a href="#sources">Sources</a></summary>
+        <ul>
+        <li>Original Article: <a href="https://madaidans-insecurities.github.io/firefox-chromium.html">https://madaidans-insecurities.github.io/firefox-chromium.html</a> (Last edited: March 19, 2022).</li>
+        <li>Another article of great help: <a href="https://x.com/gnukeith/status/1868551096190304629">https://x.com/gnukeith/status/1868551096190304629</a></li>
+        <li>Firefox Release Notes: <a href="https://www.mozilla.org/en-US/firefox/releases/">https://www.mozilla.org/en-US/firefox/releases/</a>.</li>
+        <li>Chromium Blog: <a href="https://blog.chromium.org/">https://blog.chromium.org/</a>.</li>
+        <li>Chromium Security: <a href="https://www.chromium.org/security/">https://www.chromium.org/security/</a>.</li>
+        <li>Fission Announcement: <a href="https://hacks.mozilla.org/2021/05/introducing-firefox-fission-site-isolation/">https://hacks.mozilla.org/2021/05/introducing-firefox-fission-site-isolation/</a>.</li>
+        <li>Mozilla Bugzilla: <a href="https://bugzilla.mozilla.org/">https://bugzilla.mozilla.org/</a> (e.g., Bugs 1565198, 1785762, 1798291, 1759876, 1719995, 1802345, 1813456, 1798765).</li>
+        <li>Chromium Site Isolation: <a href="https://www.chromium.org/developers/design-documents/site-isolation/">https://www.chromium.org/developers/design-documents/site-isolation/</a>.</li>
+        <li>Chromium Sandbox Docs: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/design/sandbox.md">https://chromium.googlesource.com/chromium/src/+/main/docs/design/sandbox.md</a>.</li>
+        <li>Firefox Sandbox Wiki: <a href="https://wiki.mozilla.org/Security/Sandbox">https://wiki.mozilla.org/Security/Sandbox</a>.</li>
+        <li>Chromium seccomp-bpf: <a href="https://chromium.googlesource.com/chromium/src/+/main/sandbox/linux/seccomp-bpf/">https://chromium.googlesource.com/chromium/src/+/main/sandbox/linux/seccomp-bpf/</a>.</li>
+        <li>Chromium Android Sandbox: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/android_sandboxing.md">https://chromium.googlesource.com/chromium/src/+/main/docs/android_sandboxing.md</a>.</li>
+        <li>Firefox Android Multi-Process: <a href="https://hacks.mozilla.org/2021/08/firefox-on-android/">https://hacks.mozilla.org/2021/08/firefox-on-android/</a>.</li>
+        <li>Chromium Process Model: <a href="https://www.chromium.org/developers/design-documents/process-models/">https://www.chromium.org/developers/design-documents/process-models/</a>.</li>
+        <li>Chromium Sandbox Design Documentation: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/design/sandbox.md">https://chromium.googlesource.com/chromium/src/+/main/docs/design/sandbox.md</a></li>
+        <li>Chromium Security FAQ: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/security/faq.md">https://chromium.googlesource.com/chromium/src/+/main/docs/security/faq.md</a></li>
+        <li>Mozilla Bugzilla - ACG in Renderer Process: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1785762">https://bugzilla.mozilla.org/show_bug.cgi?id=1785762</a> (Bug 1785762)</li>
+        <li>Mozilla Bugzilla - Socket Process Enhancements: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1378417">https://bugzilla.mozilla.org/show_bug.cgi?id=1378417</a> (Bug 1378417)</li>
+        <li>Firefox win32k Rollout: <a href="https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100">https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100</a></li>
+        <li>Firefox no longer expose X11 to the content process: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1129492">https://bugzilla.mozilla.org/show_bug.cgi?id=1129492</a></li>
+        <li>Firefox enabled ACG on the utility process: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">https://bugzilla.mozilla.org/show_bug.cgi?id=1765372</a></li>
+        <li>Firefox Sandbox Wiki: <a href="https://wiki.mozilla.org/Security/Sandbox">https://wiki.mozilla.org/Security/Sandbox</a></li>
+        <li>Mozilla Firefox Release Notes: <a href="https://www.mozilla.org/en-US/firefox/releases/">https://www.mozilla.org/en-US/firefox/releases/</a></li>
+        <li>Chromium CFI: <a href="https://www.chromium.org/developers/testing/control-flow-integrity/">https://www.chromium.org/developers/testing/control-flow-integrity/</a>.</li>
+        <li>Chromium Fonts: <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/security/fonts.md">https://chromium.googlesource.com/chromium/src/+/main/docs/security/fonts.md</a>.</li>
+        <li>Chromium JIT Hardening: <a href="https://blog.chromium.org/2020/05/hardening-javascript-jit-compiler.html">https://blog.chromium.org/2020/05/hardening-javascript-jit-compiler.html</a>.</li>
+        <li>Chromium PartitionAlloc: <a href="https://chromium.googlesource.com/chromium/src/+/main/base/allocator/partition_allocator/">https://chromium.googlesource.com/chromium/src/+/main/base/allocator/partition_allocator/</a></li>
+        <li>Firefox mozjemalloc Bug: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1673491">https://bugzilla.mozilla.org/show_bug.cgi?id=1673491</a> (Bug 1673491)</li>
+        <li>Mozilla Performance Wiki (Allocator): <a href="https://wiki.mozilla.org/Performance/Memory/Allocator">https://wiki.mozilla.org/Performance/Memory/Allocator</a></li>
+        <li>Chromium Clang Usage (Automatic Variable Initialisation): <a href="https://chromium.googlesource.com/chromium/src/+/main/docs/security/faq.md">https://chromium.googlesource.com/chromium/src/+/main/docs/security/faq.md</a></li>
+        <li>Firefox Bugzilla (Automatic Variable Initialisation): <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1495987">https://bugzilla.mozilla.org/show_bug.cgi?id=1495987</a> (Bug 1495987)</li>
+        <li>GrapheneOS Usage Guide: <a href="https://grapheneos.org/usage#web-browsing">https://grapheneos.org/usage#web-browsing</a>.</li>
+        <li>Daniel Micay Reddit: <a href="https://old.reddit.com/r/GrapheneOS/comments/ciizae/vanadium_and_bromium_privacy/ev6m2ot/?context=3">https://old.reddit.com/r/GrapheneOS/comments/ciizae/vanadium_and_bromium_privacy/ev6m2ot/?context=3</a>.</li>
+        <li>Daniel Micay Twitter Archive: <a href="https://web.archive.org/web/20201106071605/https://twitter.com/DanielMicay/status/1154510616222142467">https://web.archive.org/web/20201106071605/https://twitter.com/DanielMicay/status/1154510616222142467</a>.</li>
+        <li>QubesOS Browser Docs: <a href="https://www.qubes-os.org/doc/browser-vm/">https://www.qubes-os.org/doc/browser-vm/</a>.</li>
+        <li>Joanna Rutkowska Resources: <a href="https://invisiblethingslab.com/resources.html">https://invisiblethingslab.com/resources.html</a>.</li>
+        <li>Recent GrapheneOS Tweet: <a href="https://x.com/GrapheneOS/status/1861538183038607398">https://x.com/GrapheneOS/status/1861538183038607398</a>.</li>
+        <li>Another recent Graphenweet: <a href="https://x.com/GrapheneOS/status/1864441441843359961">https://x.com/GrapheneOS/status/1864441441843359961</a>.</li>
+      </ul>
+      </details> 
+  
+<p class="p-final">Thank You</p>  
 </body>
 </html>
