@@ -189,13 +189,6 @@
 
     <p>Chromium recently added the <a href="https://thehackernews.com/2024/04/google-chrome-adds-v8-sandbox-new.html">V8 sandbox</a> which is a whole extra layer of sandboxing for the overall majority of attacks on browsers targeting the JavaScript runtime.</p>
 
-    <p>Firefox does not employ a hardened memory allocator; it currently uses mozjemalloc, which is derived from jemalloc. Jemalloc focuses primarily on performance rather than security, making it vulnerable to exploitation. While mozjemalloc does introduce some security enhancements to jemalloc, these are insufficient to address the fundamental architectural vulnerabilities. On the other hand, Chromium has implemented PartitionAlloc across its entire codebase through the "PartitionAlloc-Everywhere" initiative.</p>
-
-    <p>PartitionAlloc is significantly more secure than mozjemalloc.</p>
-
-    <p>I decided to take this format from Madaidans and update it, so you can think of this as a updated version of the Firefox and Chromium article.</p>
-
-
     <h2 id="misc"><a href="#misc">3. Miscellaneous</a></h2>
     <p>Firefox’s smaller market share doesn’t inherently make it safer—attackers target vulnerabilities, not popularity. Chromium’s larger user base drives faster patching and exploit mitigation development. Mozilla has improved Firefox since 2022, but its security focus still trails Chromium’s engineering rigor.</p>
   
