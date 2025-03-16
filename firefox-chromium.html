@@ -61,7 +61,7 @@
 
     <h3 id="android"><a href="#android">1.4 Android</a></h3>
     <p>Avoid using Firefox-based browsers like Firefox on Android due to:</p>
-    <p>Increased Vulnerability: Firefox lacks internal sandboxing, unlike Chromium which uses Android's isolatedProcess for strong isolation.</p>
+    <p>Increased Vulnerability: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1565196">Firefox lacks internal sandboxing</a>, unlike Chromium which uses Android's <a href="https://developer.android.com/guide/topics/manifest/service-element">isolatedProcess</a> for strong isolation.</p>
     <p>Sandboxing Deficiency: Even on desktop, Firefox's sandbox is weaker, particularly on Linux, with limited site isolation compared to Chromium. Android version lags further in sandbox improvements.</p>
 
     <h2 id="exploit-mitigations"><a href="#exploit-mitigations">2. Exploit Mitigations</a></h2>
