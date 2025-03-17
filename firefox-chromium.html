@@ -10,10 +10,10 @@
 </head>
 <body>
     <h1>Firefox and Chromium</h1>
-    <p class="date"><em><time datetime="2025-03-03">Last edited: March 3, 2025</time></em></p>
+    <p class="date"><em><time datetime="2025-03-03">Last edited: March 3, 2025</time></em></p><br>
     <p>Note: This is the continuation to the original <a href="https://madaidans-insecurities.github.io/firefox-chromium.html">post</a> by Madaidan, but since the original project hasn't updated in almost 3 years, I've decided to provide a new update on it with the help of <a href="https://grok.com">Grok AI</a>.</p><br>
     
-    <p>Firefox is often touted as a more secure browser due to Mozilla’s privacy-focused reputation. However, this perception conflates privacy with security—an error this article aims to correct. Here, we analyze Firefox’s security model against Chromium’s, focusing on their resistance to exploitation rather than privacy policies. Since the last update on March 19, 2022, both browsers have evolved, but significant gaps remain. This article covers process architecture, sandboxing, exploit mitigations, and more, updated to reflect the current state as of March 3, 2025.</p>
+    <p>Firefox is often touted as a more secure browser due to Mozilla’s privacy-focused reputation. However, this perception conflates privacy with security—an error this article aims to correct. Here, we analyze Firefox’s security model against Chromium’s, focusing on their resistance to exploitation rather than privacy policies. Since the last update on March 19, 2022, both browsers have evolved, but significant gaps remain. This article covers process architecture, sandboxing, exploit mitigations, and more, updated to reflect the current state as of March 3, 2025.</p><br>
 
     <p>Firefox has a much weaker content sandbox across platforms.</p>
 
@@ -21,7 +21,7 @@
 
     <p>Firefox is even less secure on Android and Linux. Firefox sandbox does less and is much weaker but there are other weaknesses.</p>
 
-    <p>Firefox sandbox is much weaker than Chromium on desktop Linux. The main difference is that Firefox doesn't have completed site isolation, so it only defends the overall OS from compromise rather than properly defending sites and browser data from sites (<a href="https://wiki.mozilla.org/Project_Fission">source</a>, <a href="https://bugzilla.mozilla.org/">Bugzilla</a>)</p>
+    <p>Firefox sandbox is much weaker than Chromium on desktop Linux. The main difference is that Firefox doesn't have completed site isolation, so it only defends the overall OS from compromise rather than properly defending sites and browser data from sites (<a href="https://wiki.mozilla.org/Project_Fission">source</a>, <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1451850">Bugzilla</a>)</p>
 
     <h2 id="sandboxing"><a href="#sandboxing">1. Sandboxing</a></h2>
     <p>Sandboxing isolates applications and restricts their resource access, preventing vulnerabilities in one program from compromising the entire system. Modern browsers use sandboxing extensively: they run multiple processes (content, GPU, RDD, etc.) each with <a href="https://en.wikipedia.org/wiki/Principle_of_least_privilege">minimal privileges</a>, processing untrusted input while minimizing attack surface. Without a sandbox, a browser exploit could hijack the entire system. With one, attackers need a second vulnerability to escape the sandbox, raising the bar significantly.</p>
