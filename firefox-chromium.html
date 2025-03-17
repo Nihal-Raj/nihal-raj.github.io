@@ -252,7 +252,9 @@
     either <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1381050">ACG</a> or <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1378417">CIG</a>.
     <br>
     <br>
-    Currently, ACG was added to the <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">utility</a> and <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1785762">renderer process</a> in Firefox 115 (2023) and is active in the now-enabled socket process (since Firefox 118, 2023). CIG is limited to socket and RDD processes, with no broader adoption. Firefox has improved but trails Chromium’s granularity.
+    Currently, ACG was added to the <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">utility</a> and 
+    <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1785762">renderer process</a> in Firefox 115 (2023) and is active in the now-enabled socket process 
+    (since Firefox 118, 2023). CIG is limited to socket and RDD processes, with no broader adoption. Firefox has improved but trails Chromium’s granularity.
     However, Chromium's application of ACG is still currently limited due to the inherent incompatibility with JIT engines, which dynamically generate code
     (<a href="#jit-hardening">JIT is explained in further detail below</a>). <a
     href="https://github.com/chromium/chromium/search?q=MITIGATION_DYNAMIC_CODE_DISABLE">ACG is primarily enabled in relatively minor processes</a>, such as the
@@ -509,10 +511,14 @@
     lots of code during those windows (have you actually measured how long those windows are?). second, the window can effectively be extended to arbitrary lengths by first overwriting
     ExecutableAllocator::nonWritableJitCode to false. <br>
     <br>
-    in summary, this is a half-baked security measure that is DOA.<br>
-    <br>
-    Furthermore, the areas of major attention are <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1151624">Firefox's lack of PID namespace isolation</a> and eventually the lack of good JITSploitation mitigations, whereas Chromium has rolled out its virtual memory cage and Safari already has one in its JIT-specific allocator.
-    
+    in summary, this is a half-baked security measure that is DOA.<br>    
+  </p>
+
+  <br>
+  
+  <p>
+    Furthermore, the areas of major attention are <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1151624">Firefox's lack of PID namespace isolation</a> and eventually the lack of good
+    JITSploitation mitigations, whereas Chromium has rolled out its virtual memory cage and Safari already has one in its JIT-specific allocator.
   </p>
 
   <h3 id="memory-allocator-hardening"><a href="#memory-allocator-hardening">2.5 Memory Allocator Hardening</a></h3>
