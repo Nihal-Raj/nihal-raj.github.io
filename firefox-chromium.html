@@ -51,7 +51,7 @@
 
     <p><a href="https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html">Seccomp-BPF</a> is a Linux sandboxing technology that enables the restriction of system calls available to a process, significantly reducing the kernel's attack surface and serving as a fundamental component of most Linux sandboxing mechanisms.</p>
 
-    <p>Firefox is not utilizing it the same way Chromium is (<a href="https://searchfox.org/mozilla-central/rev/9ae77e4ce3378bd683ac9a86b729ea6b6bd22cb8/security/sandbox/linux/SandboxFilter.cpp#1291">source</a>, <a href="https://bugzilla.mozilla.org/">Bugzilla</a>).</p>
+    <p>Firefox is not utilizing it the same way Chromium is (<a href="https://searchfox.org/mozilla-central/rev/9ae77e4ce3378bd683ac9a86b729ea6b6bd22cb8/security/sandbox/linux/SandboxFilter.cpp#1291">source</a>, <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1302711">Bugzilla</a>).</p>
     
     <p>This is the main way out of the sandbox and is leveraged in most real world browser exploits. It's easier to exploit the kernel than the browser broker process in practice.</p>
 
