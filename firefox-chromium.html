@@ -509,7 +509,9 @@
     lots of code during those windows (have you actually measured how long those windows are?). second, the window can effectively be extended to arbitrary lengths by first overwriting
     ExecutableAllocator::nonWritableJitCode to false. <br>
     <br>
-    in summary, this is a half-baked security measure that is DOA.
+    in summary, this is a half-baked security measure that is DOA.<br>
+    Furthermore, the areas of major attention are <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1151624">Firefox's lack of PID namespace isolation</a> and eventually the lack of good JITSploitation mitigations, whereas Chromium has rolled out its virtual memory cage and Safari already has one in its JIT-specific allocator.
+    
   </p>
 
   <h3 id="memory-allocator-hardening"><a href="#memory-allocator-hardening">2.5 Memory Allocator Hardening</a></h3>
@@ -721,6 +723,7 @@
     <li><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1785762">ACG enabled in renderer process</a>.</li>
     <li><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1689128">Support for blocking untrusted fonts from specific processes added</a>.</li>
     <li><a href="https://security.googleblog.com/2022/05/retrofitting-temporal-memory-safety-on-c.html">MiraclePtr and *Scan implemented by Chromium</a></li>
+    <li><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1151624">Firefox's lack of PID namespace isolation</a></li>
     </ul>
   </details> 
   
