@@ -55,9 +55,16 @@ thead, tfoot {
   color: #fff;
 }
 
+.quote {
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid;
+  font-style: italic;
+}
+
 @media (prefers-color-scheme: dark) {
   body {
-      background-color: #252627;
+      background-color: black;
       max-width: 650px;
       font-size: 18px;
       font-family: 'Nobile', Helvetica, Arial;
