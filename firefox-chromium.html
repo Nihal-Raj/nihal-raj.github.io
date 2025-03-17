@@ -38,7 +38,7 @@
     <p>Additionally, cross-site leaks in Fission allow compromised processes to bypass site isolation and access data from other sites (<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1707955">Bugzilla: 1707955</a>).</p>
 
     <h3 id="windows"><a href="#windows">1.2 Windows</a></h3>
-    <p>On Windows, Chromium uses a robust sandbox with strict process mitigations, like Arbitrary Code Guard (ACG) and Code Integrity Guard (CIG), enabled by default. Firefox, as of 2022, lacked these, exposing it to basic code execution exploits. By 2025, Firefox has adopted some Windows mitigations—<a href-"https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">ACG was added</a> in Firefox 115 (2023)—but CIG remains absent, and its sandbox still permits broader system access than Chromium’s.</p>
+    <p>On Windows, Chromium uses a robust sandbox with strict process mitigations, like Arbitrary Code Guard (ACG) and Code Integrity Guard (CIG), enabled by default. Firefox, as of 2022, lacked these, exposing it to basic code execution exploits. By 2025, Firefox has adopted some Windows mitigations—<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">ACG was added</a> in Firefox 115 (2023)—but CIG remains absent, and its sandbox still permits broader system access than Chromium’s.</p>
 
     <p>As of Firefox 100, released in May 2022, Mozilla has <a href="https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100/">implemented win32k Lockdown</a> for content processes on Windows. This security feature restricts access to certain system calls, reducing the attack surface and making sandbox escapes more difficult.</p>
     
