@@ -38,9 +38,9 @@
     <p>Additionally, cross-site leaks in Fission allow compromised processes to bypass site isolation and access data from other sites (<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1707955">Bugzilla: 1707955</a>).</p>
 
     <h3 id="windows"><a href="#windows">1.2 Windows</a></h3>
-    <p>On Windows, Chromium uses a robust sandbox with strict process mitigations, like Arbitrary Code Guard (ACG) and Code Integrity Guard (CIG), enabled by default. Firefox, as of 2022, lacked these, exposing it to basic code execution exploits. By 2025, Firefox has adopted some Windows mitigations—ACG was added in Firefox 115 (2023)—but CIG remains absent, and its sandbox still permits broader system access than Chromium’s.</p>
+    <p>On Windows, Chromium uses a robust sandbox with strict process mitigations, like Arbitrary Code Guard (ACG) and Code Integrity Guard (CIG), enabled by default. Firefox, as of 2022, lacked these, exposing it to basic code execution exploits. By 2025, Firefox has adopted some Windows mitigations—<a href-"https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">ACG was added</a> in Firefox 115 (2023)—but CIG remains absent, and its sandbox still permits broader system access than Chromium’s.</p>
 
-    <p>As of Firefox 100, released in May 2022, Mozilla has <a href="https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100/">implemented Win32k Lockdown</a> for content processes on Windows. This security feature restricts access to certain system calls, reducing the attack surface and making sandbox escapes more difficult.</p>
+    <p>As of Firefox 100, released in May 2022, Mozilla has <a href="https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100/">implemented win32k Lockdown</a> for content processes on Windows. This security feature restricts access to certain system calls, reducing the attack surface and making sandbox escapes more difficult.</p>
     
     <p>While Chromium implemented Win32k Lockdown earlier, in 2016, Firefox has since adopted similar measures to enhance its sandboxing capabilities on Windows.</p>
 
@@ -154,7 +154,7 @@
     <h3 id="cfi"><a href="#cfi">2.2 Control Flow Integrity (CFI)</a></h3>
     <p>CFI prevents code hijacking. Chromium uses Clang’s forward-edge CFI on Linux/Android and Control Flow Guard on Windows. Firefox lacked CFI in 2022. By 2025, Firefox 121 (2024) introduced coarse-grained forward-edge CFI on Linux, but it’s less comprehensive than Chromium’s, and backward-edge CFI (e.g., SafeStack) is still missing.</p>
     <h3 id="fonts"><a href="#fonts">2.3 Untrusted Fonts Blocking</a></h3>
-    <p>Chromium blocks untrusted fonts to reduce attack surface; Firefox didn’t in 2022. By 2025, Firefox 124 (2024) restricts font loading in sandboxed processes, catching up but not surpassing Chromium’s stricter defaults.</p>
+    <p>Chromium blocks untrusted fonts to reduce attack surface; Firefox didn’t in 2022. By 2025, Firefox 124 (2024) <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1689128">restricts font loading in sandboxed processes</a>, catching up but not surpassing Chromium’s stricter defaults.</p>
     <h3 id="jit"><a href="#jit">2.4 JIT Hardening</a></h3>
     <p>Both browsers use JIT compilers, requiring writable-executable memory—a security risk. Chromium’s JIT mitigations (e.g., partitioning) were stronger in 2022. In 2025, Firefox (via Firefox 122, 2024) has adopted similar hardening, narrowing the gap, though Chromium’s implementation remains more battle-tested.</p>
     <h3 id="memory-allocator"><a href="#memory-allocator">2.5 Memory Allocator Hardening</a></h3>
