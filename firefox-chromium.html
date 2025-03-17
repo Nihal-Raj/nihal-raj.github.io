@@ -193,9 +193,8 @@
     </li>
 
     <li class="lilist">
-      Firefox also does not have an audio process, whereas <a href="https://docs.google.com/document/d/1s_Fd1WRDdpb5n6C2MSJjeC3fis6hULZwfKMeDd4K5tI/">Chromium has a
-      dedicated audio service</a>. The lack of such a process in Firefox means that audio functionality is merged into the content process, which is the cause of the
-      <a href="#linux-sandbox-escapes">PulseAudio sandbox escape vector on Linux systems</a>.
+      Firefox has moved audio decoding to the utility process, whereas <a href="https://docs.google.com/document/d/1s_Fd1WRDdpb5n6C2MSJjeC3fis6hULZwfKMeDd4K5tI/">Chromium has a
+      dedicated audio service</a>.
     </li>
 
     <li class="lilist">
@@ -303,7 +302,7 @@
         <tr>
           <td>Audio</td>
           <td>Yes</td>
-          <td>No</td>
+          <td>Yes</td>
           <td>Yes</td>
           <td>No</td>
         </tr>
@@ -718,7 +717,7 @@
     <li><a href="https://hacks.mozilla.org/2022/05/improved-process-isolation-in-firefox-100">win32k rollout</a></li>
     <li><a href=https://bugzilla.mozilla.org/show_bug.cgi?id=1129492">X11 no longer exposed in content process</a></li>
     <li><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1347710">GPU process of Windows is sandboxed.</a>.</li>
-    <li><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">ACG is now enabled in utility process.</a>.</li>
+    <li><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1765372">Audio decoding is moved to the utility process and ACG is enabled in it.</a>.</li>
     <li><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1785762">ACG enabled in renderer process</a>.</li>
     <li><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1689128">Support for blocking untrusted fonts from specific processes added</a>.</li>
     <li><a href="https://security.googleblog.com/2022/05/retrofitting-temporal-memory-safety-on-c.html">MiraclePtr and *Scan implemented by Chromium</a></li>
