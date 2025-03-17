@@ -510,6 +510,7 @@
     ExecutableAllocator::nonWritableJitCode to false. <br>
     <br>
     in summary, this is a half-baked security measure that is DOA.<br>
+    <br>
     Furthermore, the areas of major attention are <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1151624">Firefox's lack of PID namespace isolation</a> and eventually the lack of good JITSploitation mitigations, whereas Chromium has rolled out its virtual memory cage and Safari already has one in its JIT-specific allocator.
     
   </p>
